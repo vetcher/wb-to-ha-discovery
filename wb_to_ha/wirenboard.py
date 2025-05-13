@@ -2,9 +2,9 @@ import logging
 import re
 from typing import Protocol
 
-from ha_wb_discovery.wirenboard_registry import WirenBoardDeviceRegistry, WirenDevice, WirenControl
-from ha_wb_discovery.mqtt_conn.mqtt_client import MQTTRouter
-from ha_wb_discovery.mappers import WirenControlType, WIREN_UNITS_DICT
+from wb_to_ha.wirenboard_registry import WirenBoardDeviceRegistry, WirenDevice, WirenControl
+from wb_to_ha.mqtt.mqtt_router import MQTTRouter
+from wb_to_ha.mappers import WirenControlType, WIREN_UNITS_DICT
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +47,7 @@ class Wirenboard:
         self._subscribe_qos = subscribe_qos
         self._publish_qos = publish_qos
         self._publish_retain = publish_retain
+        self._unknown_types = []
         if hass is not None:
             self.hass = hass
 
@@ -121,7 +122,7 @@ class Wirenboard:
                         has_changes |= control.apply_units(WIREN_UNITS_DICT[control.type])
                 except ValueError:
                     if not meta_value in self._unknown_types:
-                        logger.warning(f'unknown type for wirenboard control: {meta_value}')
+                        logger.warning(f'unknown type for wirenboard control={control.id}: "{meta_value}"')
                         self._unknown_types.append(meta_value)
             elif meta_name == 'readonly':
                 has_changes |= control.apply_read_only(True if meta_value == '1' else False)

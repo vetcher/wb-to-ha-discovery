@@ -14,7 +14,7 @@ def preprocess_schema_lines(line: str, replacers: dict[str, str]) -> str:
     return line
 
 def write_schema(docs: TextIOWrapper):
-    with open("ha_wb_discovery/config.py", "r") as f:
+    with open("wb_to_ha_discovery/config.py", "r") as f:
         lines = f.readlines()
         found_schema = False
         for line in lines:

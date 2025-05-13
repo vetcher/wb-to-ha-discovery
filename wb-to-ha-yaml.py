@@ -5,11 +5,15 @@ import logging
 import signal
 import yaml
 from voluptuous import MultipleInvalid
+from aiohttp import web
 
-from ha_wb_discovery.config import config_schema_builder, LOGLEVEL_MAPPER
-from ha_wb_discovery.homeassistant import HomeAssistantDiscoveryCustomizer
+from wb_to_ha import handlers
+from wb_to_ha.config import config_schema_builder, LOGLEVEL_MAPPER
+from wb_to_ha.homeassistant import HomeAssistantDiscoveryCustomizer
 from gmqtt.client import Client as MQTTClient
-from ha_wb_discovery.app import App
+from wb_to_ha.app import App
+from wb_to_ha.manual_config import ManualConfigService
+from wb_to_ha.mqtt.conn.inmem_mqtt import InmemMQTTClient
 
 logging.getLogger().setLevel(logging.INFO)  # root
 
@@ -33,12 +37,7 @@ def main(cfg):
             wb_cfg["username"],
             wb_cfg["password"]
         )
-    ha_mqtt_client = MQTTClient(client_id=ha_cfg["mqtt_client_id"])
-    if ha_cfg.get("username") and ha_cfg.get("password"):
-        ha_mqtt_client.set_auth_credentials(
-            ha_cfg["username"],
-            ha_cfg["password"]
-        )
+    ha_mqtt_client = InmemMQTTClient()
     ha_customizer = HomeAssistantDiscoveryCustomizer(
         splitted_device_ids=cfg["homeassistant.splitted_device_ids"],
         combined_devices=cfg["homeassistant.combined_devices"],
@@ -46,25 +45,32 @@ def main(cfg):
         ignored_device_control_ids=cfg["homeassistant.ignored_device_control_ids"],
         enable_default_combined_devices=cfg["homeassistant.enable_default_combined_devices"],
     )
+
+    manual_config_service = ManualConfigService()
+    handlers_service = handlers.HTTPService(manual_config_service, ha_mqtt_client)
     app = App(ha_cfg, wb_cfg, ha_mqtt_client, wb_mqtt_client, ha_customizer)
 
     loop = asyncio.get_event_loop()
 
-    def stop_app():
-        loop.create_task(app.stop())
+    async def stop_app(*arg):
+        asyncio.create_task(app.stop())
 
-    loop.add_signal_handler(signal.SIGINT, stop_app)
-    loop.add_signal_handler(signal.SIGTERM, stop_app)
+    async def run_app(*arg):
+        asyncio.create_task(app.run())
 
-    loop.run_until_complete(app.run())
+    wapp = web.Application()
+    wapp.on_startup.append(run_app)
+    wapp.on_shutdown.append(stop_app)
+    wapp.add_routes([
+        web.get('/api/wb_to_ha.yaml', handlers_service.wb_to_ha_yaml),
+        web.get('/', handlers_service.index),
+        web.static('/', 'frontend')
+    ])
+    web.run_app(wapp, host='0.0.0.0', port=8099, loop=loop)
 
 if __name__ == "__main__":
     parser = optparse.OptionParser()
-    parser.add_option("-c", "--config", default="/etc/wb-to-ha-discovery.yaml", dest="config_file", help="Path to config file")
-    parser.add_option("--ha_mqtt_host", default="", dest="ha_mqtt_host", help="HA MQTT host")
-    parser.add_option("--ha_mqtt_port", type=int, default=1883, dest="ha_mqtt_port", help="HA MQTT port")
-    parser.add_option("--ha_mqtt_username", default="", dest="ha_mqtt_username", help="HA MQTT username")
-    parser.add_option("--ha_mqtt_password", default="", dest="ha_mqtt_password", help="HA MQTT password")
+    parser.add_option("-c", "--config", default="/data/options.json", dest="config_file", help="Path to config file. In YAML or JSON format")
     opts, args = parser.parse_args()
 
     config_file = opts.config_file

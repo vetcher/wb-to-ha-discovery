@@ -5,9 +5,9 @@ import re
 import time
 from typing import Callable, Coroutine
 
-import ha_wb_discovery.mappers as mappers
-from ha_wb_discovery.mqtt_conn.mqtt_client import MQTTRouter
-from ha_wb_discovery.wirenboard_registry import WirenControl, WirenDevice, WirenBoardDeviceRegistry
+import wb_to_ha.mappers as mappers
+from wb_to_ha.mqtt.mqtt_router import MQTTRouter
+from wb_to_ha.wirenboard_registry import WirenControl, WirenDevice, WirenBoardDeviceRegistry
 
 logger = logging.getLogger(__name__)
 

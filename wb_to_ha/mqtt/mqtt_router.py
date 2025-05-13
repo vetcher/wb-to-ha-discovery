@@ -1,9 +1,8 @@
 import logging
-from typing import Callable, Union
+from typing import Callable, Protocol
 import re
 
 from gmqtt import Client
-from ha_wb_discovery.mqtt_conn.local_mqtt import LocalMQTTClient
 
 logger = logging.getLogger(__name__)
 
@@ -16,18 +15,29 @@ class Subscription:
         pattern = pattern.replace('+', '[^/]+').replace('#', '.+')
         self.re_matcher = re.compile(pattern)
 
-def default_404(topic: str, payload: bytes):
+def default_404(client, topic: str, payload: bytes):
     if logger.isEnabledFor(logging.DEBUG):
         pl = payload.decode('utf-8')
         logger.warning(f'no handler matched for topic={topic} payload={pl}')
 
+class IMQTTClient(Protocol):
+    on_message: Callable
+    on_disconnect: Callable
+    on_connect: Callable
+
+    def subscribe(self, topic: str, qos: int = 0):
+        ...
+
+    def publish(self, topic: str, payload: str, qos: int = 0, retain: bool = False):
+        ...
+
 class MQTTRouter:
     _client_name: str = ''
-    _mqtt: Client | LocalMQTTClient
+    _mqtt: IMQTTClient
     _subscriptions: list[Subscription]
     on_404: Callable = default_404
 
-    def __init__(self, cl: Client | LocalMQTTClient, client_name: str):
+    def __init__(self, cl: IMQTTClient, client_name: str):
         self._client_name = client_name
         cl.on_message = self._on_message
         self._mqtt = cl

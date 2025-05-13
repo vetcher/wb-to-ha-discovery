@@ -1,31 +1,43 @@
 import asyncio
 import logging
-from typing import Union
-from ha_wb_discovery.homeassistant import HomeAssistant, HomeAssistantDiscoveryCustomizer
-from ha_wb_discovery.mqtt_conn.local_mqtt import LocalMQTTClient
+from typing import Callable, Protocol, Union
 from gmqtt import Client as MQTTClient
-from ha_wb_discovery.mqtt_conn.mqtt_client import MQTTRouter
-from ha_wb_discovery.wirenboard import Wirenboard
-from ha_wb_discovery.wirenboard_registry import WirenBoardDeviceRegistry
+from wb_to_ha.homeassistant import HomeAssistant, HomeAssistantDiscoveryCustomizer
+from wb_to_ha.mqtt.conn.tester_mqtt import LocalMQTTClient
+from wb_to_ha.mqtt.mqtt_router import MQTTRouter
+from wb_to_ha.wirenboard import Wirenboard
+from wb_to_ha.wirenboard_registry import WirenBoardDeviceRegistry
 
 logger = logging.getLogger(__name__)
+
+class IMQTTClient(Protocol):
+    on_message: Callable
+    on_disconnect: Callable
+    on_connect: Callable
+
+    def subscribe(self, topic: str, qos: int = 0):
+        ...
+
+    def publish(self, topic: str, payload: str, qos: int = 0, retain: bool = False):
+        ...
 
 class App:
     _ha_mqtt_router: MQTTRouter
     _wb_mqtt_router: MQTTRouter
-    _ha_mqtt_client: Union[LocalMQTTClient, MQTTClient]
-    _wb_mqtt_client: Union[LocalMQTTClient, MQTTClient]
+    _ha_mqtt_client: IMQTTClient
+    _wb_mqtt_client: IMQTTClient
     _wb: Wirenboard
     _ha: HomeAssistant
     _ha_config: dict
     _wb_config: dict
     _stoper: asyncio.Event
+    _is_stopping: bool
 
     def __init__(self,
                 ha_config: dict,
                 wb_config: dict,
-                ha_mqtt_client: Union[LocalMQTTClient, MQTTClient],
-                wb_mqtt_client: Union[LocalMQTTClient, MQTTClient],
+                ha_mqtt_client: IMQTTClient,
+                wb_mqtt_client: IMQTTClient,
                 ha_customizer: HomeAssistantDiscoveryCustomizer,
                 ):
         self._stoper = asyncio.Event()
@@ -66,6 +78,7 @@ class App:
         self._ha_mqtt_client.on_connect = self._ha.on_connect
         self._wb_mqtt_client.on_connect = self._wb.on_connect
         self._ha.on_control_set_state = self._wb.on_control_set_state
+        self._is_stopping = False
 
     async def run(self):
         async with asyncio.TaskGroup() as tg:
@@ -110,6 +123,9 @@ class App:
                 raise
 
     async def stop(self):
+        if self._is_stopping:
+            return
+        self._is_stopping = True
         logger.info("Stopping app")
         await self._wb_mqtt_client.disconnect()
         await self._ha_mqtt_client.disconnect()

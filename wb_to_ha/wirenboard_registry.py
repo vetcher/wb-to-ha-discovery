@@ -1,7 +1,6 @@
 import logging
-from typing import Callable, Protocol
 
-from ha_wb_discovery.mappers import WirenControlType
+from wb_to_ha.mappers import WirenControlType
 
 logger = logging.getLogger(__name__)
 

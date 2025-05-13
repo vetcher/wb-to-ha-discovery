@@ -1,3 +1,4 @@
 gmqtt==0.6.11
 PyYAML==5.3
 voluptuous==0.11.7
+aiohttp==3.11.18

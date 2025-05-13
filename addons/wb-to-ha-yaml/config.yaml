@@ -1,8 +1,8 @@
-name: "Wiren Board Discovery"
-description: "Use Home Assistant MQTT Discovery to add Wiren Board devices"
-version: "0.1.0"
-slug: "ha_wb_discovery"
-url: "https://github.com/vetcher/wb-to-ha-discovery"
+name: "Wiren Board Discovery YAML config"
+description: "Generate configuration.yaml from Wiren Board MQTT topics"
+version: "0.2.0"
+slug: "wb_to_ha_yaml"
+url: "https://github.com/vetcher/wb-to-ha-discovery/blob/main/addons/wb-to-ha-yaml"
 init: false
 arch:
   - aarch64
@@ -12,12 +12,11 @@ arch:
   - i386
 map:
   - type: addon_config
+ingress: true
 options:
   wirenboard:
     broker_host: null
     broker_port: 1883
-  homeassistant:
-    config_publish_delay: 0
   homeassistant.ignored_device_ids: []
   homeassistant.ignored_device_control_ids: []
   homeassistant.splitted_device_ids: []
@@ -35,21 +34,6 @@ schema:
     subscribe_qos: int(0,2)?
     publish_qos: int(0,2)?
     publish_retain: bool?
-  homeassistant:
-    broker_host: str?
-    broker_port: port?
-    username: str?
-    password: password?
-    mqtt_client_id: str?
-    config_first_publish_delay: int?
-    config_publish_delay: int
-    subscribe_qos: int(0,2)?
-    availability_qos: int(0,2)?
-    availability_retain: bool?
-    config_qos: int(0,2)?
-    config_retain: bool?
-    state_qos: int(0,2)?
-    state_retain: bool?
   homeassistant.ignored_device_ids: [str]
   homeassistant.ignored_device_control_ids: [str]
   homeassistant.splitted_device_ids: [str]
@@ -60,5 +44,3 @@ schema:
   homeassistant.enable_default_combined_devices: bool
   general.loglevel: match(DEBUG|INFO|WARNING|ERROR|FATAL)
   mqtt.loglevel: match(DEBUG|INFO|WARNING|ERROR|FATAL)
-services:
-  - mqtt:need

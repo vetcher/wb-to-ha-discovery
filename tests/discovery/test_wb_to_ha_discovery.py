@@ -5,12 +5,12 @@ import os
 import sys
 import pytest
 import logging
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from ha_wb_discovery.mqtt_conn.local_mqtt import LocalMQTTClient
-from ha_wb_discovery.homeassistant import HomeAssistantDiscoveryCustomizer
-from ha_wb_discovery.app import App
-from ha_wb_discovery.config import config_schema_builder
+from wb_to_ha.mqtt.conn.tester_mqtt import LocalMQTTClient
+from wb_to_ha.homeassistant import HomeAssistantDiscoveryCustomizer
+from wb_to_ha.app import App
+from wb_to_ha.config import config_schema_builder
 
 logging.basicConfig(level=logging.DEBUG)
 
